@@ -30,8 +30,6 @@ def style_background_dashboard():
 def style_base_layout():
     st.markdown("""
                 <style>
-                @import url('https://fonts.googleapis.com/css2?family=Climate+Crisis:YEAR@1979&display=swap');
-
                 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
                 #MainMenu,footer,header{
@@ -41,18 +39,22 @@ def style_base_layout():
                     padding-top:1.5rem !important;
                 }
                 h1{
-                    font-family:'Climate Crisis',sans-serif !important ;
-                    font-size:3.5rem !important;
+                    font-family:'Outfit',sans-serif !important ;
+                    font-weight: 800 !important;
+                    font-size:3rem !important;
                     line-height:1.1 !important;
                     margin-bottom:0rem !important;
                     color:#E0E3FF;
+                    letter-spacing: -0.03em;
                 }
 
                 h2{
-                    font-family:'Climate Crisis',sans-serif !important ;
-                    font-size:3.5rem !important;
+                    font-family:'Outfit',sans-serif !important ;
+                    font-weight: 800 !important;
+                    font-size:2.5rem !important;
                     line-height:1.1 !important;
                     margin-bottom:0rem !important;
+                    letter-spacing: -0.03em;
                 }
 
                 h3,h4,p,span{

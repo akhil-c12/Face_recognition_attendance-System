@@ -1,3 +1,5 @@
+from PIL import ImageFile
+from PIL import ImageFile
 import dlib
 import numpy as np
 import face_recognition_models
@@ -12,8 +14,8 @@ def load_dlib_models():
     sp=dlib.shape_predictor(
         face_recognition_models.pose_predictor_model_location()
     )
-    
-    facerec=dlib.face_recognitino_model_v1(
+
+    facerec=dlib.face_recognition_model_v1(
         face_recognition_models.face_recognition_model_location()
     )
 
@@ -30,6 +32,7 @@ def get_face_embeddings(image_np):
         encodings.append(np.array(face_descriptor))
     return encodings
 
+@st.cache_resource
 def get_trained_model():
     X=[]
     y=[]
@@ -38,12 +41,12 @@ def get_trained_model():
 
     if not student_db:
         return None
-    
+
     for student in student_db:
         embedding=student.get('face_embedding')
         if embedding:
             X.append(np.array(embedding))
-            Y.append(student.et('student_id'))
+            y.append(student.get('student_id'))
     if len(X)==0:
         return 0
 
@@ -51,8 +54,9 @@ def get_trained_model():
 
     try:
         clf.fit(X,y)
-    except ValueError:
-        pass
+    except ValueError as e:
+        print(f"Training error: {e}")
+        return None
     return {'clf':clf,'X':X,'y':y}
 
 def train_classifier():
@@ -92,5 +96,5 @@ def predict_attendance(class_image_np):
 
 
 
-    
+
 

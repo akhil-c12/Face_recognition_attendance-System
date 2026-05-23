@@ -27,7 +27,7 @@ def teacher_screen():
 
 def login_teacher(username,password):
     if not username or not password:
-        return false
+        return False
     teacher=teacher_login(username,password)
     if teacher:
         st.session_state.user_role='teacher'

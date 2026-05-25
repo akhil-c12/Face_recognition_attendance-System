@@ -3,8 +3,10 @@ import streamlit as st
 from src.screens.ui.base_layout import style_background_dashboard, style_base_layout
 from src.screens.components.header import header_dashboard
 from src.screens.components.footer import footer_dashboard
+from src.screens.components.dialogue_create_subject import create_subject_dialog
+from src.screens.components.subject_card import subject_card
+from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects
 
-from src.database.db import check_teacher_exists,create_teacher,teacher_login
 
 def teacher_screen():
 
@@ -26,7 +28,7 @@ def teacher_dashboard():
     with c1:
         header_dashboard()
     with c2:
-        st.header(f"Welcome {teacher_data['name']}!!!!")
+        st.header(f"Welcome, {teacher_data['name']}")
         if st.button("Logout", type='secondary', key='logoutbtn'):
             st.session_state['teacher_logged_in'] = False
             if 'teacher_data' in st.session_state:
@@ -42,25 +44,16 @@ def teacher_dashboard():
 
     tab1,tab2,tab3=st.columns(3)
     with tab1:
-        type1='tertiary'
-        if st.session_state.current_teacher_tab=='take_attendance':
-            type1='primary'
-        if st.button('Take Attendance',type=type1,use_container_width=True,icon=':material/ar_on_you:'):
+        if st.button('Take Attendance',type='tertiary',use_container_width=True,icon=':material/face_retouching_natural:'):
             st.session_state.current_teacher_tab='take_attendance'
             st.rerun()
     with tab2:
-        type2='tertiary'
-        if st.session_state.current_teacher_tab=='manage_subjects':
-            type2='primary'
-        if st.button('Manage Subjects',type=type2,use_container_width=True,icon=':material/ar_on_you:'):
+        if st.button('Manage Subjects',type='primary',use_container_width=True,icon=':material/menu_book:'):
             st.session_state.current_teacher_tab='manage_subjects'
             st.rerun()
 
     with tab3:
-        type3='tertiary'
-        if st.session_state.current_teacher_tab=='attendance_records':
-            type3='primary'
-        if st.button('Attendance Records',type=type3,use_container_width=True,icon=':material/ar_on_you:'):
+        if st.button('Attendance Records',type='tertiary',use_container_width=True,icon=':material/assignment:'):
             st.session_state.current_teacher_tab='attendance_records'
             st.rerun()
 
@@ -79,10 +72,31 @@ def teacher_dashboard():
 def teacher_tab_take_attendance():
     st.header("Take Attendance")
 
-
 def teacher_tab_manage_subjects():
-    st.header("Manage Subjects")
+    teacher_id = st.session_state.teacher_data['teacher_id']
+    col1, col2 = st.columns(2)
+    with col1:
+        st.header('Manage Subjects')
+    with col2:
+        if st.button('Create New Subject', use_container_width=True):
+            create_subject_dialog(teacher_id)
 
+    subjects = get_teacher_subjects(teacher_id)
+    if subjects:
+        for sub in subjects:
+            stats = [
+                ("🫂", "Students", sub['total_students']),
+                ("🕰️", "Classes", sub['total_classes']),
+            ]
+
+            subject_card(
+                name=sub['name'],
+                code=sub['subject_code'],
+                section=sub['section'],
+                stats=stats,
+            )
+    else:
+        st.info("NO SUBJECTS FOUND. CREATE ONE ABOVE")
 
 def teacher_tab_attendance_records():
     st.header("Attendance Records")

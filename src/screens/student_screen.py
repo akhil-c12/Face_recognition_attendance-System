@@ -8,14 +8,12 @@ from PIL import Image
 import numpy as np  
 from src.database.db import get_all_students
 from src.pipelines.face_pipeline import predict_attendance,get_face_embeddings,train_classifier
+from src.screens.components.dialogue_create_subject import create_subject_dialog
 import time
 
 
 
 def student_dashboard():
-    style_background_dashboard()
-    style_base_layout()
-
     student_data=st.session_state.student_data
     student_name=student_data['name'] if isinstance(student_data,dict) else student_data[0]['name']
 
@@ -34,10 +32,31 @@ def student_dashboard():
         st.toast(st.session_state.welcome_msg)
         del st.session_state.welcome_msg
 
+    if 'current_student_tab' not in st.session_state:
+        st.session_state.current_student_tab='take_attendance'
+
+    tab1,tab2,tab3=st.columns(3)
+    with tab1:
+        if st.button('Take Attendance',type='tertiary',use_container_width=True,icon=':material/face_retouching_natural:'):
+            st.session_state.current_student_tab='take_attendance'
+            st.rerun()
+    with tab2:
+        if st.button('Manage Subjects',type='primary',use_container_width=True,icon=':material/menu_book:'):
+            st.session_state.current_student_tab='manage_subjects'
+            st.rerun()
+
+    with tab3:
+        if st.button('Attendance Records',type='tertiary',use_container_width=True,icon=':material/assignment:'):
+            st.session_state.current_student_tab='attendance_records'
+            st.rerun()
+
     st.divider()
-    st.subheader("Student Dashboard")
+
 
     footer_dashboard()
+
+
+
 def student_screen():
 
     style_background_dashboard()

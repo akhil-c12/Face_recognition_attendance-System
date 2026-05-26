@@ -59,4 +59,15 @@ def get_teacher_subjects(teacher_id):
         sub.pop('attendance_logs', None)
 
     return subjects
-    
+
+def save_attendance(subject_id, student_ids):
+    from datetime import datetime
+    timestamp = datetime.now().isoformat()
+    records = [
+        {"subject_id": subject_id, "student_id": sid, "timestamp": timestamp, "status": "present"}
+        for sid in student_ids
+    ]
+    if records:
+        response = supabase.table('attendance_logs').insert(records).execute()
+        return response.data
+    return []

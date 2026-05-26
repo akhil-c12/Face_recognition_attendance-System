@@ -1,5 +1,4 @@
 from PIL import ImageFile
-from PIL import ImageFile
 import dlib
 import numpy as np
 import face_recognition_models

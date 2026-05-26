@@ -5,12 +5,14 @@ from src.screens.components.header import header_dashboard
 from src.screens.components.footer import footer_dashboard
 from src.screens.components.dialogue_create_subject import create_subject_dialog
 from src.screens.components.subject_card import subject_card
-from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects
-
+from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects,get_all_students,save_attendance
+import numpy as np
+from src.screens.components.dialog_add_photo import add_photos_dialog
+from src.pipelines.face_pipeline import predict_attendance
 
 def teacher_screen():
 
-    style_background_dashboard()
+    style_background_dashboard()  
     style_base_layout()
 
     if st.session_state.get('teacher_logged_in'):
@@ -70,7 +72,90 @@ def teacher_dashboard():
 
 
 def teacher_tab_take_attendance():
-    st.header("Take Attendance")
+    teacher_id = st.session_state.teacher_data['teacher_id']
+    subjects = get_teacher_subjects(teacher_id)
+
+    if not subjects:
+        st.warning("No subjects found. Create a subject to take attendance.")
+        return
+
+    st.header("Take AI Attendance")
+
+    if 'attendance_images' not in st.session_state:
+        st.session_state.attendance_images = []
+    if 'attendance_results' not in st.session_state:
+        st.session_state.attendance_results = None
+
+    subject_labels = [f"{s['name']} - {s['subject_code']} (Sec {s['section']})" for s in subjects]
+    selected_label = st.selectbox("Select Subject", subject_labels)
+    selected_subject = subjects[subject_labels.index(selected_label)]
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📸 Add Photos", use_container_width=True, type='primary'):
+            add_photos_dialog()
+    with col2:
+        if st.session_state.attendance_images:
+            if st.button("🗑️ Clear Photos", use_container_width=True, type='secondary'):
+                st.session_state.attendance_images = []
+                st.session_state.attendance_results = None
+                st.rerun()
+
+    if st.session_state.attendance_images:
+        st.write(f"**{len(st.session_state.attendance_images)} photo(s) captured**")
+        img_cols = st.columns(min(len(st.session_state.attendance_images), 4))
+        for i, img in enumerate(st.session_state.attendance_images):
+            with img_cols[i % 4]:
+                st.image(img, use_container_width=True)
+
+        st.divider()
+
+        if st.button("🔍 Scan for Attendance", type='primary', use_container_width=True):
+            all_detected = {}
+            total_faces = 0
+            with st.spinner("AI is scanning faces..."):
+                for img in st.session_state.attendance_images:
+                    img_np = np.array(img)
+                    detected, all_ids, num_faces = predict_attendance(img_np)
+                    total_faces += num_faces
+                    all_detected.update(detected)
+            st.session_state.attendance_results = {
+                'detected_ids': list(all_detected.keys()),
+                'total_faces': total_faces,
+            }
+            st.rerun()
+    else:
+        st.info("📷 Add classroom photos to scan for attendance")
+
+    if st.session_state.attendance_results:
+        results = st.session_state.attendance_results
+        detected_ids = results['detected_ids']
+        total_faces = results['total_faces']
+
+        st.subheader(f"Results: {len(detected_ids)} student(s) recognized from {total_faces} face(s)")
+
+        if detected_ids:
+            all_students = get_all_students()
+            detected_students = [s for s in all_students if s['student_id'] in detected_ids]
+
+            for student in detected_students:
+                st.markdown(f"✅ **{student['name']}**")
+
+            st.divider()
+
+            if st.button("💾 Save Attendance", type='primary', use_container_width=True):
+                try:
+                    save_attendance(selected_subject['id'], detected_ids)
+                    st.success("✅ Attendance saved successfully!")
+                    st.session_state.attendance_images = []
+                    st.session_state.attendance_results = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error saving attendance: {str(e)}")
+        else:
+            st.warning("No students were recognized in the photos.")
 
 def teacher_tab_manage_subjects():
     teacher_id = st.session_state.teacher_data['teacher_id']

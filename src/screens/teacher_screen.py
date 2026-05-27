@@ -5,7 +5,7 @@ from src.screens.components.header import header_dashboard
 from src.screens.components.footer import footer_dashboard
 from src.screens.components.dialogue_create_subject import create_subject_dialog
 from src.screens.components.subject_card import subject_card
-from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects,get_all_students,save_attendance
+from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects,get_all_students,save_attendance, get_subject_students
 import numpy as np
 from src.screens.components.dialog_add_photo import add_photos_dialog
 from src.pipelines.face_pipeline import predict_attendance
@@ -46,7 +46,7 @@ def teacher_dashboard():
 
     tab1,tab2,tab3=st.columns(3)
     with tab1:
-        if st.button('Take Attendance',type='tertiary',use_container_width=True,icon=':material/face_retouching_natural:'):
+        if st.button('Take Attendance',type='secondary',use_container_width=True,icon=':material/face_retouching_natural:'):
             st.session_state.current_teacher_tab='take_attendance'
             st.rerun()
     with tab2:
@@ -55,7 +55,7 @@ def teacher_dashboard():
             st.rerun()
 
     with tab3:
-        if st.button('Attendance Records',type='tertiary',use_container_width=True,icon=':material/assignment:'):
+        if st.button('Attendance Records',type='secondary',use_container_width=True,icon=':material/assignment:'):
             st.session_state.current_teacher_tab='attendance_records'
             st.rerun()
 
@@ -94,7 +94,7 @@ def teacher_tab_take_attendance():
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📸 Add Photos", use_container_width=True, type='primary'):
+        if st.button("📷 Add Photos", use_container_width=True, type='primary'):
             add_photos_dialog()
     with col2:
         if st.session_state.attendance_images:
@@ -134,28 +134,52 @@ def teacher_tab_take_attendance():
         detected_ids = results['detected_ids']
         total_faces = results['total_faces']
 
-        st.subheader(f"Results: {len(detected_ids)} student(s) recognized from {total_faces} face(s)")
+        st.subheader(f"Review Attendance ({len(detected_ids)} recognized)")
 
-        if detected_ids:
-            all_students = get_all_students()
-            detected_students = [s for s in all_students if s['student_id'] in detected_ids]
+        sub_id = selected_subject.get('subject_id') or selected_subject.get('id')
+        enrolled_students = get_subject_students(sub_id)
 
-            for student in detected_students:
-                st.markdown(f"✅ **{student['name']}**")
+        if not enrolled_students:
+            st.warning("No students enrolled in this subject.")
+        else:
+            review_data = []
+            for student in enrolled_students:
+                review_data.append({
+                    "ID": student['student_id'],
+                    "Student Name": student['name'],
+                    "Present": student['student_id'] in detected_ids
+                })
+
+            import pandas as pd
+            df_review = pd.DataFrame(review_data)
+
+            edited_df = st.data_editor(
+                df_review,
+                column_config={
+                    "Present": st.column_config.CheckboxColumn(
+                        "Present",
+                        help="Mark attendance manually",
+                        default=False,
+                    )
+                },
+                disabled=["ID", "Student Name"],
+                hide_index=True,
+                use_container_width=True
+            )
 
             st.divider()
 
-            if st.button("💾 Save Attendance", type='primary', use_container_width=True):
+            if st.button("💾 Confirm and Save Attendance", type='primary', use_container_width=True):
+                final_present_ids = edited_df[edited_df["Present"]]["ID"].tolist()
                 try:
-                    save_attendance(selected_subject['id'], detected_ids)
-                    st.success("✅ Attendance saved successfully!")
+                    save_attendance(sub_id, final_present_ids)
+                    st.success(f"✅ Attendance saved for {len(final_present_ids)} students!")
                     st.session_state.attendance_images = []
                     st.session_state.attendance_results = None
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error saving attendance: {str(e)}")
-        else:
-            st.warning("No students were recognized in the photos.")
+
 
 def teacher_tab_manage_subjects():
     teacher_id = st.session_state.teacher_data['teacher_id']

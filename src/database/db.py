@@ -62,12 +62,49 @@ def get_teacher_subjects(teacher_id):
 
 def save_attendance(subject_id, student_ids):
     from datetime import datetime
-    timestamp = datetime.now().isoformat()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     records = [
-        {"subject_id": subject_id, "student_id": sid, "timestamp": timestamp, "status": "present"}
+        {"subject_id": subject_id, "student_id": sid, "timestamp": timestamp, "is_present": True}
         for sid in student_ids
     ]
     if records:
         response = supabase.table('attendance_logs').insert(records).execute()
         return response.data
     return []
+
+def  enroll_student_to_subject(student_id, subject_id):
+    data = {'student_id': student_id, "subject_id": subject_id}
+    response= supabase.table('subject_students').insert(data).execute()
+    return response.data
+
+
+def  unenroll_student_to_subject(student_id, subject_id):
+    response= supabase.table('subject_students').delete().eq('student_id', student_id).eq('subject_id', subject_id).execute()
+    return response.data
+
+
+
+def get_student_subjects(student_id):
+    response = supabase.table('subject_students').select('*, subjects(*)').eq('student_id', student_id).execute()
+    return response.data
+
+
+def get_student_attendance(student_id):
+    response = supabase.table('attendance_logs').select('*, subjects(*)').eq('student_id', student_id).execute()
+    return response.data
+
+
+def create_attendance(logs):
+    response = supabase.table('attendance_logs').insert(logs).execute()
+    return response.data
+
+def get_attendance_for_teacher(teacher_id):
+    response = supabase.table('attendance_logs').select("*, subjects!inner(*)").eq('subjects.teacher_id', teacher_id).execute()
+    return response.data
+def get_all_subjects():
+    response = supabase.table('subjects').select('*').execute()
+    return response.data
+
+def get_subject_students(subject_id):
+    response = supabase.table('subject_students').select('*, students(*)').eq('subject_id', subject_id).execute()
+    return [item['students'] for item in response.data]

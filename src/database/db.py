@@ -108,3 +108,7 @@ def get_all_subjects():
 def get_subject_students(subject_id):
     response = supabase.table('subject_students').select('*, students(*)').eq('subject_id', subject_id).execute()
     return [item['students'] for item in response.data]
+
+def get_detailed_attendance_for_subject(subject_id):
+    response = supabase.table('attendance_logs').select('*, students(*)').eq('subject_id', subject_id).order('timestamp', desc=True).execute()
+    return response.data

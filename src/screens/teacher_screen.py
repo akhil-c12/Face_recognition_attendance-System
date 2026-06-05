@@ -9,6 +9,7 @@ from src.screens.components.subject_card import subject_card
 from src.database.db import check_teacher_exists,create_teacher,teacher_login,get_teacher_subjects,get_all_students,save_attendance, get_subject_students, get_detailed_attendance_for_subject
 from src.screens.components.dialog_add_photo import add_photos_dialog
 from src.pipelines.face_pipeline import predict_attendance
+from src.pipelines.voice_pipeline import process_bulk_audio
 
 def teacher_screen():
     style_background_dashboard()
@@ -108,24 +109,42 @@ def teacher_tab_take_attendance():
             with img_cols[i % 4]:
                 st.image(img, use_container_width=True)
 
-        st.divider()
+    st.divider()
+    st.subheader("🎤 Voice Recognition (Optional)")
+    audio_data = st.audio_input("Record students saying 'Present' or their names")
 
+    if st.session_state.attendance_images or audio_data:
+        st.divider()
         if st.button("🔍 Scan for Attendance", type='primary', use_container_width=True):
             all_detected = {}
             total_faces = 0
-            with st.spinner("AI is scanning faces..."):
-                for img in st.session_state.attendance_images:
-                    img_np = np.array(img)
-                    detected, all_ids, num_faces = predict_attendance(img_np)
-                    total_faces += num_faces
-                    all_detected.update(detected)
+            with st.spinner("AI is scanning..."):
+                # Face Scan
+                if st.session_state.attendance_images:
+                    for img in st.session_state.attendance_images:
+                        img_np = np.array(img)
+                        detected, all_ids, num_faces = predict_attendance(img_np)
+                        total_faces += num_faces
+                        all_detected.update(detected)
+                
+                # Voice Scan
+                if audio_data:
+                    sub_id = selected_subject.get('subject_id') or selected_subject.get('id')
+                    enrolled_students = get_subject_students(sub_id)
+                    candidates = {s['student_id']: s['voice_embedding'] for s in enrolled_students if s.get('voice_embedding')}
+                    if candidates:
+                        voice_results = process_bulk_audio(audio_data.read(), candidates)
+                        all_detected.update(voice_results)
+                    else:
+                        st.info("No voice profiles found for enrolled students.")
+
             st.session_state.attendance_results = {
                 'detected_ids': list(all_detected.keys()),
                 'total_faces': total_faces,
             }
             st.rerun()
     else:
-        st.info("📷 Add classroom photos to scan for attendance")
+        st.info("📷 Add classroom photos or 🎤 record audio to scan for attendance")
 
     if st.session_state.attendance_results:
         results = st.session_state.attendance_results

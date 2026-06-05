@@ -13,6 +13,9 @@ def style_background_home():
                     padding: 2.5rem !important;
                     border-radius:5rem !important;
                 }
+                .stApp div[data-testid="stColumn"] h2 {
+                    color: #1e293b !important;
+                }
                 </style>
                 """,unsafe_allow_html=True)
 
@@ -22,6 +25,41 @@ def style_background_dashboard():
                 <style>
                 .stApp{
                     background:#E0E3FF !important;
+                    color:#1e293b !important;
+                }
+                .stApp h1,
+                .stApp h2:not(.snap-class-heading),
+                .stApp h3,
+                .stApp h4,
+                .stApp h5,
+                .stApp h6,
+                .stApp p,
+                .stApp label,
+                .stApp [data-testid="stMarkdownContainer"],
+                .stApp [data-testid="stWidgetLabel"],
+                .stApp [data-testid="stCameraInput"] label,
+                .stApp [data-testid="stAudioInput"] label {
+                    color:#1e293b !important;
+                }
+                .stApp button,
+                .stApp button p,
+                .stApp button span,
+                .stApp button [data-testid="stMarkdownContainer"] {
+                    color:white !important;
+                }
+                .stApp input,
+                .stApp textarea,
+                .stApp [data-baseweb="input"] input,
+                .stApp [data-baseweb="select"] > div {
+                    background:#ffffff !important;
+                    color:#1e293b !important;
+                    border-color:#94a3b8 !important;
+                    caret-color: #1e293b !important;
+                }
+                .stApp input::placeholder,
+                .stApp textarea::placeholder {
+                    color:#64748b !important;
+                    opacity:1 !important;
                 }
                 </style>
                 """,unsafe_allow_html=True)

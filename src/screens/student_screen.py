@@ -7,6 +7,7 @@ from src.database.db import (
     create_student, 
     get_student_subjects, 
     get_student_attendance, 
+    get_attendance_logs_for_subjects,
     unenroll_student_to_subject
 )
 from src.pipelines.voice_pipeline import get_voice_embedding
@@ -34,33 +35,75 @@ def student_dashboard():
 
     st.write('')
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.header('Your Enrolled Subjects')
-    with c2:
-        if st.button('Enroll in Subject', type='primary', use_container_width=True):
-            enroll_dialog()
-
-    st.divider()
-
+    # Overall summary calculation
     with st.spinner('Loading your enrolled subjects..'):
         subjects = get_student_subjects(student_id)
         logs = get_student_attendance(student_id)
 
+    subject_ids = [
+        sub_node['subjects']['subject_id']
+        for sub_node in subjects
+        if sub_node.get('subjects')
+    ]
+    subject_logs = get_attendance_logs_for_subjects(subject_ids)
+
+    subject_sessions_map = {}
+    for log in subject_logs:
+        subject_sessions_map.setdefault(log['subject_id'], set()).add(log['timestamp'])
+
     stats_map = {}
     for log in logs:
         sid = log['subject_id']
-        if sid not in stats_map:
-            stats_map[sid] = {"total": 0, "attended": 0}
-        stats_map[sid]['total'] += 1
+        stats_map.setdefault(sid, set())
         if log.get('is_present'):
-            stats_map[sid]['attended'] += 1
+            stats_map[sid].add(log['timestamp'])
+
+    total_classes_all = 0
+    attended_classes_all = 0
+    for sub_node in subjects:
+        sub = sub_node['subjects']
+        sid = sub['subject_id']
+        total_sessions = len(subject_sessions_map.get(sid, set()))
+        attended_sessions = len(stats_map.get(sid, set()))
+        total_sessions = max(total_sessions, attended_sessions)
+        total_classes_all += total_sessions
+        attended_classes_all += attended_sessions
+
+    overall_percentage = (
+        round((attended_classes_all / total_classes_all) * 100, 1)
+        if total_classes_all
+        else 0
+    )
+
+    st.subheader("📊 Overall Attendance Summary")
+    met1, met2, met3 = st.columns(3)
+    with met1:
+        st.metric("Total Attendance", f"{overall_percentage}%")
+    with met2:
+        st.metric("Total Classes", total_classes_all)
+    with met3:
+        st.metric("Attended", attended_classes_all)
+
+    st.divider()
+    c1, c2 = st.columns([2, 1], vertical_alignment='center')
+    with c1:
+        st.header('Your Enrolled Subjects')
+    with c2:
+        if st.button('Enroll in Subject', type='primary', use_container_width=True, key='enroll_btn_dashboard'):
+            enroll_dialog()
 
     cols = st.columns(2)
     for i, sub_node in enumerate(subjects):
         sub = sub_node['subjects']
         sid = sub['subject_id']
-        stats = stats_map.get(sid, {"total": 0, "attended": 0})
+        total_sessions = len(subject_sessions_map.get(sid, set()))
+        attended_sessions = len(stats_map.get(sid, set()))
+        total_sessions = max(total_sessions, attended_sessions)
+        attendance_percentage = (
+            round((attended_sessions / total_sessions) * 100, 1)
+            if total_sessions
+            else 0
+        )
         
         def unenroll_button():
             if st.button("Unenroll from this course", type='secondary', key=f"unenroll_{sid}", use_container_width=True, icon=':material/delete_forever:'):
@@ -74,8 +117,9 @@ def student_dashboard():
                 code=sub['subject_code'],
                 section=sub['section'],
                 stats=[
-                    ('📅', 'Total', stats['total']),
-                    ('✅', 'Attended', stats['attended']),
+                    ('📅', 'Total', total_sessions),
+                    ('✅', 'Attended', attended_sessions),
+                    ('📊', 'Attendance', f"{attendance_percentage:g}%"),
                 ],
                 footer_callback=unenroll_button
             )
